@@ -69,35 +69,6 @@ func setTable(t *tview.Table, logLines []logLine) {
 	}
 }
 
-func logLineToList(line logLine) []string {
-	// logLineToList ouputs the list of strings we want
-	// for the detailPane from a logLine struct
-	var items []string
-
-	// these items are present for every type of logLine
-	items = append(items, line.Timestamp.Format(time.Stamp))
-	items = append(items, "Type: "+line.LineType)
-
-	// these items are empty strings if the logLine does not include it
-	if line.Result != "" {
-		items = append(items, "Result: "+line.Result)
-	}
-
-	if line.Domain != "" {
-		items = append(items, "Domain: "+line.Domain)
-	}
-
-	if line.Requester != "" {
-		items = append(items, "Requester: "+line.Requester)
-	}
-
-	if line.Upstream != "" {
-		items = append(items, "Upstream: "+line.Upstream)
-	}
-
-	return items
-}
-
 func unmarshalLogLine(line string) logLine {
 	// unmarshalLogLine unmarshals a log line to the struct logLine
 	tokens := strings.Fields(line)
