@@ -206,12 +206,11 @@ func main() {
 		// * h key: help modal
 		if event.Key() == tcell.KeyRune {
 			if app.GetFocus() != filterField {
-				if event.Rune() == 'f' {
-					// set focus to input
+				switch event.Rune() {
+				case 'f':
 					app.SetFocus(filterField)
 					return nil
-				}
-				if event.Rune() == 'r' {
+				case 'r':
 					tf, tailError = tail.TailFile("/var/log/pihole.log", tail.Config{})
 					logLines = make([]logLine, 0) // clear out logLines
 
@@ -226,6 +225,7 @@ func main() {
 
 					rows = len(logLines)
 					setTable(table, logLines)
+					return nil
 				}
 			}
 		}
