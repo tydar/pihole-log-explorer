@@ -250,7 +250,7 @@ func main() {
 
 	filterField.SetDoneFunc(func(key tcell.Key) {
 		searchKey := filterField.GetText()
-		filterIndicator.SetText(fmt.Sprintf("[yellow]Text search: %v", searchKey))
+		filterIndicator.SetText(fmt.Sprintf("Text search: %v", searchKey))
 		filtered := filterLogLine(logLines, textSearchLogLine(searchKey))
 		setTable(table, filtered)
 		app.SetFocus(table)
@@ -296,7 +296,7 @@ func main() {
 			table.Clear()
 
 			// LineType may have a tview-escaped closing square bracket, so we have to undo that
-			filterIndicator.SetText(fmt.Sprintf("[yellow]LineType: %v",
+			filterIndicator.SetText(fmt.Sprintf("LineType: %v",
 				strings.ReplaceAll(selectedLine.LineType, "[]", "]")))
 
 			filtered := filterLogLine(logLines, func(ll logLine) bool {
@@ -310,7 +310,7 @@ func main() {
 			detailPane.AddItem("Result: "+selectedLine.Result, "", 0, func() {
 				table.Clear()
 
-				filterIndicator.SetText(fmt.Sprintf("[yellow]Result: %v", selectedLine.Result))
+				filterIndicator.SetText(fmt.Sprintf("Result: %v", selectedLine.Result))
 
 				filtered := filterLogLine(logLines, func(ll logLine) bool {
 					return ll.Result == selectedLine.Result
@@ -324,7 +324,7 @@ func main() {
 			detailPane.AddItem("Domain: "+selectedLine.Domain, "", 0, func() {
 				table.Clear()
 
-				filterIndicator.SetText(fmt.Sprintf("[yellow]Domain: %v", selectedLine.Domain))
+				filterIndicator.SetText(fmt.Sprintf("Domain: %v", selectedLine.Domain))
 
 				filtered := filterLogLine(logLines, func(ll logLine) bool {
 					return ll.Domain == selectedLine.Domain
@@ -338,7 +338,7 @@ func main() {
 			detailPane.AddItem("Requester: "+selectedLine.Requester, "", 0, func() {
 				table.Clear()
 
-				filterIndicator.SetText(fmt.Sprintf("[yellow]Requester: %v", selectedLine.Requester))
+				filterIndicator.SetText(fmt.Sprintf("Requester: %v", selectedLine.Requester))
 
 				filtered := filterLogLine(logLines, func(ll logLine) bool {
 					return ll.Requester == selectedLine.Requester
@@ -352,7 +352,7 @@ func main() {
 			detailPane.AddItem("Upstream: "+selectedLine.Upstream, "", 0, func() {
 				table.Clear()
 
-				filterIndicator.SetText(fmt.Sprintf("[yellow]Upstream: %v", selectedLine.Upstream))
+				filterIndicator.SetText(fmt.Sprintf("Upstream: %v", selectedLine.Upstream))
 
 				filtered := filterLogLine(logLines, func(ll logLine) bool {
 					return ll.Upstream == selectedLine.Upstream
