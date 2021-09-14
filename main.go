@@ -2,13 +2,13 @@ package main
 
 import (
 	"fmt"
-
-	"github.com/gdamore/tcell/v2"
-	"github.com/nxadm/tail"
-	"github.com/rivo/tview"
-
 	"strings"
 	"time"
+
+	"github.com/gdamore/tcell/v2"
+	"github.com/rivo/tview"
+
+	"github.com/nxadm/tail"
 )
 
 // Interpreted log line types
