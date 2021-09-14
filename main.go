@@ -153,21 +153,21 @@ func main() {
 	app := tview.NewApplication()
 
 	table := tview.NewTable().SetBorders(false) // table element
-	table.SetBorder(true).SetTitle("PiholeLog")
+	table.SetBorder(true).SetTitle("[yellow]PiholeLog")
 
 	// detailPane shows the details of a given entry
 	// and allows filter setting
 	detailPane := tview.NewList()
-	detailPane.SetBorder(true).SetTitle("Details")
+	detailPane.SetBorder(true).SetTitle("[yellow]Details")
 
 	// filterIndicator is a text indicator of the current filter state
 	filterIndicator := tview.NewTextView()
-	filterIndicator.SetTitle("Filter Status:")
+	filterIndicator.SetTitle("[yellow]Filter Status:")
 	filterIndicator.SetText("None").SetBorder(true)
 
 	// filterField is the input box for arbitrary text search
 	filterField := tview.NewInputField().SetFieldWidth(30).SetFieldBackgroundColor(tcell.ColorBlack)
-	filterField.SetTitle("Filter string:").SetBorder(true)
+	filterField.SetTitle("[yellow]Filter string:").SetBorder(true)
 
 	// set up flexbox layout with larger table than detail pane
 	flex := tview.NewFlex().
@@ -179,6 +179,19 @@ func main() {
 			AddItem(table, 0, 2, true), 0, 1, true,
 		)
 
+	// helpModal is a modal that displays controls help
+	helpModal := tview.NewModal()
+	helpModal.SetText("Hotkeys:\n" +
+		"* f: enter search string\n" +
+		"* r: reload the log file\n" +
+		"* h: bring up this help pane\n" +
+		"* ESC: clear current filter state\n").
+		AddButtons([]string{"Close"}).
+		SetDoneFunc(func(buttonIndex int, buttonLabel string) {
+			app.SetRoot(flex, false)
+		})
+
+	// begin loading log file
 	tf, tailError := tail.TailFile("/var/log/pihole.log", tail.Config{})
 
 	if tailError != nil {
@@ -226,6 +239,9 @@ func main() {
 					rows = len(logLines)
 					setTable(table, logLines)
 					return nil
+				case 'h':
+					app.SetRoot(helpModal, false)
+					return nil
 				}
 			}
 		}
@@ -234,7 +250,7 @@ func main() {
 
 	filterField.SetDoneFunc(func(key tcell.Key) {
 		searchKey := filterField.GetText()
-		filterIndicator.SetText(fmt.Sprintf("Text search: %v", searchKey))
+		filterIndicator.SetText(fmt.Sprintf("[yellow]Text search: %v", searchKey))
 		filtered := filterLogLine(logLines, textSearchLogLine(searchKey))
 		setTable(table, filtered)
 		app.SetFocus(table)
@@ -280,7 +296,7 @@ func main() {
 			table.Clear()
 
 			// LineType may have a tview-escaped closing square bracket, so we have to undo that
-			filterIndicator.SetText(fmt.Sprintf("LineType: %v",
+			filterIndicator.SetText(fmt.Sprintf("[yellow]LineType: %v",
 				strings.ReplaceAll(selectedLine.LineType, "[]", "]")))
 
 			filtered := filterLogLine(logLines, func(ll logLine) bool {
@@ -294,7 +310,7 @@ func main() {
 			detailPane.AddItem("Result: "+selectedLine.Result, "", 0, func() {
 				table.Clear()
 
-				filterIndicator.SetText(fmt.Sprintf("Result: %v", selectedLine.Result))
+				filterIndicator.SetText(fmt.Sprintf("[yellow]Result: %v", selectedLine.Result))
 
 				filtered := filterLogLine(logLines, func(ll logLine) bool {
 					return ll.Result == selectedLine.Result
@@ -308,7 +324,7 @@ func main() {
 			detailPane.AddItem("Domain: "+selectedLine.Domain, "", 0, func() {
 				table.Clear()
 
-				filterIndicator.SetText(fmt.Sprintf("Domain: %v", selectedLine.Domain))
+				filterIndicator.SetText(fmt.Sprintf("[yellow]Domain: %v", selectedLine.Domain))
 
 				filtered := filterLogLine(logLines, func(ll logLine) bool {
 					return ll.Domain == selectedLine.Domain
@@ -322,7 +338,7 @@ func main() {
 			detailPane.AddItem("Requester: "+selectedLine.Requester, "", 0, func() {
 				table.Clear()
 
-				filterIndicator.SetText(fmt.Sprintf("Requester: %v", selectedLine.Requester))
+				filterIndicator.SetText(fmt.Sprintf("[yellow]Requester: %v", selectedLine.Requester))
 
 				filtered := filterLogLine(logLines, func(ll logLine) bool {
 					return ll.Requester == selectedLine.Requester
@@ -336,7 +352,7 @@ func main() {
 			detailPane.AddItem("Upstream: "+selectedLine.Upstream, "", 0, func() {
 				table.Clear()
 
-				filterIndicator.SetText(fmt.Sprintf("Upstream: %v", selectedLine.Upstream))
+				filterIndicator.SetText(fmt.Sprintf("[yellow]Upstream: %v", selectedLine.Upstream))
 
 				filtered := filterLogLine(logLines, func(ll logLine) bool {
 					return ll.Upstream == selectedLine.Upstream
