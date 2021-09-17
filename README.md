@@ -7,4 +7,4 @@ Current functionality:
 * Filter for certain types of queries
 * Filter by the upstream DNS provider, IP address of the requester, and the IP address returned
 
-[![Gif of TUI](2021-09-17 09-50-41.gif)]  
+![Gif of TUI](https://raw.githubusercontent.com/tydar/pihole-log-explorer/main/2021-09-17%2009-50-41.gif)  
