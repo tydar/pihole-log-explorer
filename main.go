@@ -123,11 +123,17 @@ func main() {
 	})
 
 	filterField.SetDoneFunc(func(key tcell.Key) {
-		searchKey := filterField.GetText()
-		filterIndicator.SetText(fmt.Sprintf("Text search: %v", searchKey))
-		filtered := FilterLogLine(logLines, TextSearchLogLine(searchKey))
-		setTable(table, filtered)
-		app.SetFocus(table)
+		if key == tcell.KeyEscape {
+			setTable(table, logLines)
+			filterIndicator.SetText("None")
+			filterField.SetText("")
+			app.SetFocus(table)
+		} else {
+			searchKey := filterField.GetText()
+			filterIndicator.SetText(fmt.Sprintf("Text search: %v", searchKey))
+			filtered := FilterLogLine(logLines, TextSearchLogLine(searchKey))
+			setTable(table, filtered)
+		}
 	})
 
 	// tcell constants and types used for input handling
