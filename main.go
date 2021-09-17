@@ -75,15 +75,18 @@ func main() {
 	// with this configuration, Tail will spit out the whole file and then stop
 	// after we get the initial file parsed, we can proceed to load the state of the initial table
 	// once that is complete, we can enter the main loop and update if I choose to implement that feature
-	var logLines []LogLine
+	var fullLogLines []LogLine
 	for line := range tf.Lines {
 		logLine := UnmarshalLogLine(line.Text)
-		logLines = append(logLines, logLine)
+		fullLogLines = append(fullLogLines, logLine)
 	}
 
+	// set current view to full log initially
+	currentView := fullLogLines
+
 	// the main table for viewing the unedited log lines will be just one column
-	rows := len(logLines)
-	setTable(table, logLines)
+	rows := len(currentView)
+	setTable(table, currentView)
 
 	// set up input handling
 	app = app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
@@ -99,7 +102,7 @@ func main() {
 					return nil
 				case 'r':
 					tf, tailError = tail.TailFile("/var/log/pihole.log", tail.Config{})
-					logLines = make([]LogLine, 0) // clear out logLines
+					fullLogLines = make([]LogLine, 0) // clear out logLines
 
 					if tailError != nil {
 						panic(tailError)
@@ -107,11 +110,13 @@ func main() {
 
 					for line := range tf.Lines {
 						logLine := UnmarshalLogLine(line.Text)
-						logLines = append(logLines, logLine)
+						fullLogLines = append(fullLogLines, logLine)
 					}
 
-					rows = len(logLines)
-					setTable(table, logLines)
+					currentView = fullLogLines
+
+					rows = len(currentView)
+					setTable(table, currentView)
 					return nil
 				case 'h':
 					app.SetRoot(helpModal, false)
@@ -124,15 +129,18 @@ func main() {
 
 	filterField.SetDoneFunc(func(key tcell.Key) {
 		if key == tcell.KeyEscape {
-			setTable(table, logLines)
+			currentView = fullLogLines
+			setTable(table, fullLogLines)
 			filterIndicator.SetText("None")
 			filterField.SetText("")
 			app.SetFocus(table)
 		} else {
 			searchKey := filterField.GetText()
 			filterIndicator.SetText(fmt.Sprintf("Text search: %v", searchKey))
-			filtered := FilterLogLine(logLines, TextSearchLogLine(searchKey))
-			setTable(table, filtered)
+			filtered := FilterLogLine(fullLogLines, TextSearchLogLine(searchKey))
+			currentView = filtered
+			setTable(table, currentView)
+			app.SetFocus(table)
 		}
 	})
 
@@ -144,9 +152,11 @@ func main() {
 	// * SetSelectable determines whether rows, columns, or cells can be selected
 	table.Select(0, 0).SetFixed(1, 1).SetDoneFunc(func(key tcell.Key) {
 		if key == tcell.KeyEscape {
-			setTable(table, logLines)
+			currentView = fullLogLines
+			setTable(table, currentView)
 			filterIndicator.SetText("None")
 			filterField.SetText("")
+			detailPane.Clear()
 		}
 		if key == tcell.KeyEnter {
 			table.SetSelectable(true, true)
@@ -158,13 +168,16 @@ func main() {
 		// this is working at the moment, but I think I need to create some higher level utilities
 		// to enable filtering more general (e.g. so the user can just type in something to filter)
 
+		rows = len(currentView)
+
 		detailPane.Clear()
-		selectedLine := logLines[rows-row]
+		selectedLine := currentView[rows-row]
 
 		// ESC key when in the details pane will clear out the applied filter and return focus to the table
 		detailPane.SetDoneFunc(func() {
 			detailPane.Clear()
-			setTable(table, logLines)
+			currentView = fullLogLines
+			setTable(table, currentView)
 			filterIndicator.SetText("None")
 			app.SetFocus(table)
 		})
@@ -179,11 +192,14 @@ func main() {
 			filterIndicator.SetText(fmt.Sprintf("LineType: %v",
 				strings.ReplaceAll(selectedLine.LineType, "[]", "]")))
 
-			filtered := FilterLogLine(logLines, func(ll LogLine) bool {
+			filtered := FilterLogLine(fullLogLines, func(ll LogLine) bool {
 				return ll.LineType == selectedLine.LineType
 			})
 
-			setTable(table, filtered)
+			currentView = filtered
+
+			setTable(table, currentView)
+			app.SetFocus(table)
 		})
 
 		if selectedLine.Result != "" {
@@ -192,11 +208,14 @@ func main() {
 
 				filterIndicator.SetText(fmt.Sprintf("Result: %v", selectedLine.Result))
 
-				filtered := FilterLogLine(logLines, func(ll LogLine) bool {
+				filtered := FilterLogLine(fullLogLines, func(ll LogLine) bool {
 					return ll.Result == selectedLine.Result
 				})
 
-				setTable(table, filtered)
+				currentView = filtered
+
+				setTable(table, currentView)
+				app.SetFocus(table)
 			})
 		}
 
@@ -206,11 +225,14 @@ func main() {
 
 				filterIndicator.SetText(fmt.Sprintf("Domain: %v", selectedLine.Domain))
 
-				filtered := FilterLogLine(logLines, func(ll LogLine) bool {
+				filtered := FilterLogLine(fullLogLines, func(ll LogLine) bool {
 					return ll.Domain == selectedLine.Domain
 				})
 
-				setTable(table, filtered)
+				currentView = filtered
+
+				setTable(table, currentView)
+				app.SetFocus(table)
 			})
 		}
 
@@ -220,11 +242,14 @@ func main() {
 
 				filterIndicator.SetText(fmt.Sprintf("Requester: %v", selectedLine.Requester))
 
-				filtered := FilterLogLine(logLines, func(ll LogLine) bool {
+				filtered := FilterLogLine(fullLogLines, func(ll LogLine) bool {
 					return ll.Requester == selectedLine.Requester
 				})
 
-				setTable(table, filtered)
+				currentView = filtered
+
+				setTable(table, currentView)
+				app.SetFocus(table)
 			})
 		}
 
@@ -234,11 +259,14 @@ func main() {
 
 				filterIndicator.SetText(fmt.Sprintf("Upstream: %v", selectedLine.Upstream))
 
-				filtered := FilterLogLine(logLines, func(ll LogLine) bool {
+				filtered := FilterLogLine(fullLogLines, func(ll LogLine) bool {
 					return ll.Upstream == selectedLine.Upstream
 				})
 
-				setTable(table, filtered)
+				currentView = filtered
+
+				setTable(table, currentView)
+				app.SetFocus(table)
 			})
 		}
 		app.SetFocus(detailPane)
