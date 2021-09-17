@@ -11,53 +11,7 @@ import (
 	"github.com/nxadm/tail"
 )
 
-// Interpreted log line types
-// Note: [ required before a ] to ensure tview doesn't interpret strings enclosed in [] as style.
-const (
-	Blocked   = "gravity blocked"
-	Read      = "read"
-	AAAA      = "query[AAAA[]"
-	A         = "query[A[]"
-	Ptr       = "query[PTR[]"
-	Cached    = "cached"
-	Forwarded = "forwarded"
-	Reply     = "reply"
-	Unknown   = "unknown"
-)
-
-type logLine struct {
-	Timestamp time.Time // Timestamp for line
-	LineType  string    // Type of line. Interpreted by UI to determine actions
-	Result    string    // Present for cached, reply, blocked
-	Domain    string    // Present for cached, reply, blocked, query[*], forwarded
-	Requester string    // Present for query[*]
-	Upstream  string    // Present for forwarded
-	Line      string    // Store full line text for UI purposes
-}
-
-type filterFunc func(logLine) bool
-
-func filterLogLine(lines []logLine, f filterFunc) []logLine {
-	// filterLogLine filters a slice of logLines using f to determine inclusion
-	// f is type func(logLine) bool
-	var filtered []logLine
-	for i := range lines {
-		if f(lines[i]) {
-			filtered = append(filtered, lines[i])
-		}
-	}
-	return filtered
-}
-
-func textSearchLogLine(s string) filterFunc {
-	// textSearchLogLine is a helper function to generate a filterFunc
-	// that searches for text s anywhere in a logLine
-	return func(ll logLine) bool {
-		return strings.Contains(ll.Line, s)
-	}
-}
-
-func setTable(t *tview.Table, logLines []logLine) {
+func setTable(t *tview.Table, logLines []LogLine) {
 	// setTable sets the value of the main table based on a slice of logLines
 	t.Clear()
 	rows := len(logLines)
@@ -66,86 +20,6 @@ func setTable(t *tview.Table, logLines []logLine) {
 			tview.NewTableCell(logLines[rows-r].Line).
 				SetTextColor(tcell.ColorWhite).
 				SetAlign(tview.AlignLeft))
-	}
-}
-
-func unmarshalLogLine(line string) logLine {
-	// unmarshalLogLine unmarshals a log line to the struct logLine
-	tokens := strings.Fields(line)
-
-	// parse time
-	// since time.Parse needs an exact string for parsing
-	// we have to reconstruct the timestamp from the tokens
-	timeStr := tokens[0] + " " + tokens[1] + " " + tokens[2]
-	timestamp, timeError := time.Parse(time.Stamp, timeStr)
-	if timeError != nil {
-		panic(timeError)
-	}
-
-	// parse out LineType
-	var lineType string
-
-	switch tokens[4] {
-	case "gravity":
-		lineType = Blocked
-	case "read":
-		lineType = Read
-	case "query[AAAA]":
-		lineType = AAAA
-	case "query[A]":
-		lineType = A
-	case "query[PTR]":
-		lineType = Ptr
-	case "cached":
-		lineType = Cached
-	case "forwarded":
-		lineType = Forwarded
-	case "reply":
-		lineType = Reply
-	default:
-		lineType = Unknown
-	}
-
-	// parse out result for cached, reply, and blocked
-	result := ""
-	if lineType == Cached || lineType == Reply {
-		result = tokens[7]
-	} else if lineType == Blocked { // since blocked lines have "gravity blocked", indicies for later values are moved up by one
-		result = tokens[8]
-	}
-
-	// parse out Domain for cached, reply, blocked, query[*], and forwarded
-	domain := ""
-	if lineType == Blocked {
-		domain = tokens[6]
-	} else if lineType == Cached || lineType == Reply || lineType == AAAA ||
-		lineType == A || lineType == Ptr || lineType == Forwarded {
-		domain = tokens[5]
-	}
-
-	// parse out Requester from query[*] lines
-	requester := ""
-	if lineType == A || lineType == AAAA || lineType == Ptr {
-		requester = tokens[7]
-	}
-
-	// parse out upstream from forwarded replies
-	upstream := ""
-	if lineType == Forwarded {
-		upstream = tokens[7]
-	}
-
-	// ensure all closing square brackets are escaped so tview displays them properly
-	sanitizedLine := strings.ReplaceAll(line, "]", "[]")
-
-	return logLine{
-		Timestamp: timestamp,
-		LineType:  lineType,
-		Result:    result,
-		Domain:    domain,
-		Requester: requester,
-		Upstream:  upstream,
-		Line:      sanitizedLine,
 	}
 }
 
@@ -201,9 +75,9 @@ func main() {
 	// with this configuration, Tail will spit out the whole file and then stop
 	// after we get the initial file parsed, we can proceed to load the state of the initial table
 	// once that is complete, we can enter the main loop and update if I choose to implement that feature
-	var logLines []logLine
+	var logLines []LogLine
 	for line := range tf.Lines {
-		logLine := unmarshalLogLine(line.Text)
+		logLine := UnmarshalLogLine(line.Text)
 		logLines = append(logLines, logLine)
 	}
 
@@ -225,14 +99,14 @@ func main() {
 					return nil
 				case 'r':
 					tf, tailError = tail.TailFile("/var/log/pihole.log", tail.Config{})
-					logLines = make([]logLine, 0) // clear out logLines
+					logLines = make([]LogLine, 0) // clear out logLines
 
 					if tailError != nil {
 						panic(tailError)
 					}
 
 					for line := range tf.Lines {
-						logLine := unmarshalLogLine(line.Text)
+						logLine := UnmarshalLogLine(line.Text)
 						logLines = append(logLines, logLine)
 					}
 
@@ -251,7 +125,7 @@ func main() {
 	filterField.SetDoneFunc(func(key tcell.Key) {
 		searchKey := filterField.GetText()
 		filterIndicator.SetText(fmt.Sprintf("Text search: %v", searchKey))
-		filtered := filterLogLine(logLines, textSearchLogLine(searchKey))
+		filtered := FilterLogLine(logLines, TextSearchLogLine(searchKey))
 		setTable(table, filtered)
 		app.SetFocus(table)
 	})
@@ -299,7 +173,7 @@ func main() {
 			filterIndicator.SetText(fmt.Sprintf("LineType: %v",
 				strings.ReplaceAll(selectedLine.LineType, "[]", "]")))
 
-			filtered := filterLogLine(logLines, func(ll logLine) bool {
+			filtered := FilterLogLine(logLines, func(ll LogLine) bool {
 				return ll.LineType == selectedLine.LineType
 			})
 
@@ -312,7 +186,7 @@ func main() {
 
 				filterIndicator.SetText(fmt.Sprintf("Result: %v", selectedLine.Result))
 
-				filtered := filterLogLine(logLines, func(ll logLine) bool {
+				filtered := FilterLogLine(logLines, func(ll LogLine) bool {
 					return ll.Result == selectedLine.Result
 				})
 
@@ -326,7 +200,7 @@ func main() {
 
 				filterIndicator.SetText(fmt.Sprintf("Domain: %v", selectedLine.Domain))
 
-				filtered := filterLogLine(logLines, func(ll logLine) bool {
+				filtered := FilterLogLine(logLines, func(ll LogLine) bool {
 					return ll.Domain == selectedLine.Domain
 				})
 
@@ -340,7 +214,7 @@ func main() {
 
 				filterIndicator.SetText(fmt.Sprintf("Requester: %v", selectedLine.Requester))
 
-				filtered := filterLogLine(logLines, func(ll logLine) bool {
+				filtered := FilterLogLine(logLines, func(ll LogLine) bool {
 					return ll.Requester == selectedLine.Requester
 				})
 
@@ -354,7 +228,7 @@ func main() {
 
 				filterIndicator.SetText(fmt.Sprintf("Upstream: %v", selectedLine.Upstream))
 
-				filtered := filterLogLine(logLines, func(ll logLine) bool {
+				filtered := FilterLogLine(logLines, func(ll LogLine) bool {
 					return ll.Upstream == selectedLine.Upstream
 				})
 
